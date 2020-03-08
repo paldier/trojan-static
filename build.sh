@@ -3,9 +3,9 @@
 set -e
 set -x
 
-#ARCH=arm64
+ARCH=arm64
 #ARCH=arm
-ARCH=mips
+#ARCH=mips
 #ARCH=mipsle
 PWD=`pwd`
 #prefix asuswrt:/jffs/softcenter,openwrt:/usr
@@ -16,15 +16,15 @@ export CFLAGS="-I $PWD/opt/cross/arm-linux-musleabi/arm-linux-musleabi/include -
 export CXXFLAGS="-I $PWD/opt/cross/arm-linux-musleabi/arm-linux-musleabi/include"
 export CC=$PWD/opt/cross/arm-linux-musleabi/bin/arm-linux-musleabi-gcc
 export CXX=$PWD/opt/cross/arm-linux-musleabi/bin/arm-linux-musleabi-g++
-export CORSS_PREFIX=$PWD/opt/cross/arm-linux-musleabi/bin/arm-linux-musl-
+export CORSS_PREFIX=$PWD/opt/cross/arm-linux-musleabi/bin/arm-linux-musleabi-
 export TARGET_CFLAGS=""
 export BOOST_ABI=sysv
 elif [ "$ARCH" = "arm64" ];then
-export CFLAGS="-I $PWD/opt/cross/aarch64-linux-musleabi/aarch64-linux-musleabi/include -Os"
-export CXXFLAGS="-I $PWD/opt/cross/aarch64-linux-musleabi/aarch64-linux-musleabi/include"
-export CC=$PWD/opt/cross/aarch64-linux-musleabi/bin/aarch64-linux-musleabi-gcc
-export CXX=$PWD/opt/cross/aarch64-linux-musleabi/bin/aarch64-linux-musleabi-g++
-export CORSS_PREFIX=$PWD/opt/cross/aarch64-linux-musleabi/bin/aarch64-linux-musl-
+export CFLAGS="-I $PWD/opt/cross/aarch64-linux-musl/aarch64-linux-musl/include -Os"
+export CXXFLAGS="-I $PWD/opt/cross/aarch64-linux-musl/aarch64-linux-musl/include"
+export CC=$PWD/opt/cross/aarch64-linux-musl/bin/aarch64-linux-musl-gcc
+export CXX=$PWD/opt/cross/aarch64-linux-musl/bin/aarch64-linux-musl-g++
+export CORSS_PREFIX=$PWD/opt/cross/aarch64-linux-musl/bin/aarch64-linux-musl-
 export TARGET_CFLAGS=""
 export BOOST_ABI=aapcs
 elif [ "$ARCH" = "mips" ];then
@@ -56,7 +56,7 @@ LDFLAGS="-L$DEST/lib -Wl,--gc-sections"
 CPPFLAGS="-I$DEST/include"
 CXXFLAGS="$CXXFLAGS $CFLAGS"
 if [ "$ARCH" = "arm" ];then
-CONFIGURE="linux-arm -Os -static --prefix=/opt zlib --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
+CONFIGURE="linux-armv4 -Os -static --prefix=/opt zlib --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
 elif [ "$ARCH" = "arm64" ];then
 CONFIGURE="linux-aarch64 -Os -static --prefix=/opt zlib --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
 elif [ "$ARCH" = "mips" ];then
@@ -70,6 +70,7 @@ MAKE="make"
 # ZLIB # ####################################################################
 ######## ####################################################################
 
+[ ! -d "zlib-1.2.11" ] && tar xvJf zlib-1.2.11.tar.xz
 cd zlib-1.2.11
 if [ ! -f "stamp-h1" ];then
 CC=${CORSS_PREFIX}gcc \
@@ -91,6 +92,8 @@ fi
 # OPENSSL # #################################################################
 ########### #################################################################
 
+cd $BASE
+[ ! -d "openssl-1.1.1d" ] && tar zxvf openssl-1.1.1d.tar.gz
 cd $BASE/openssl-1.1.1d
 if [ ! -f "stamp-h1" ];then
 ./Configure $CONFIGURE
@@ -104,6 +107,8 @@ fi
 #  BOOST  # #################################################################
 ########### #################################################################
 
+cd $BASE
+[ ! -d "boost_1_71_0" ] && tar jxvf boost_1_71_0.tar.bz2
 cd $BASE/boost_1_71_0
 if [ ! -f "stamp-h1" ];then
 rm -rf project-config.jam
@@ -112,8 +117,8 @@ cd tools/build/src/engine
 CC=/usr/bin/gcc \
 CXX=/usr/bin/g++ \
 CFLAGS="" \
-CPPFLAGS=""  \
-CXXFLAGS="$CFLAGS"  \
+CPPFLAGS="" \
+CXXFLAGS="$CFLAGS" \
 ./build.sh gcc
 cd $BASE/boost_1_71_0
 cp -rf tools/build/src/engine/b2 ./b2
@@ -125,6 +130,9 @@ CC=${CORSS_PREFIX}gcc \
 CXX=${CORSS_PREFIX}g++ \
 ./b2 install --ignore-site-config --toolset=gcc --prefix=$DEST abi=$BOOST_ABI --no-cmake-config --layout=tagged --build-type=minimal link=static threading=multi runtime-link=static $mipsarch variant=release --disable-long-double -sNO_BZIP2=1 -sZLIB_INCLUDE=$DEST/include -sZLIB_LIBPATH=$DEST/lib --with-system --with-program_options --with-date_time
 #--without-mpi --without-python --without-graph_parallel --without-test --without-serialization
+mv $DEST/lib/libboost_date_time-*.a $DEST/lib/libboost_date_time.a 
+mv $DEST/lib/libboost_program_options-*.a $DEST/lib/libboost_program_options.a 
+mv $DEST/lib/libboost_system-*.a $DEST/lib/libboost_system.a 
 touch stamp-h1
 fi
 
@@ -132,10 +140,15 @@ fi
 #  CMAKE  # #################################################################
 ########### #################################################################
 
+cd $BASE
+[ ! -d "cmake-3.13.2" ] && tar zxvf cmake-3.13.2.tar.gz
 cd $BASE/cmake-3.13.2
 if [ ! -f "stamp-h1" ];then
 CC=/usr/bin/gcc \
 CXX=/usr/bin/g++ \
+CFLAGS="-I /usr/include" \
+CPPFLAGS="-I /usr/include" \
+CXXFLAGS="$CFLAGS" \
 ./bootstrap --prefix=$DEST/bin/cmake
 make
 make install
@@ -146,8 +159,9 @@ fi
 # TROJAN  # #################################################################
 ########### #################################################################
 
+cd $BASE
+[ ! -d "trojan-1.14.1" ] && tar zxvf trojan-1.14.1.tar.gz
 cd $BASE/trojan-1.14.1
-if [ ! -f "stamp-h1" ];then
 rm -rf CMakeFiles
 rm -rf CMakeCache.txt
 cp -rf ../CMakeLists.txt ./CMakeLists.txt
@@ -160,8 +174,7 @@ CFLAGS=$CFLAGS \
 CXXFLAGS=$CXXFLAGS \
 $DEST/bin/cmake/bin/cmake -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_VERSION=1 -DCMAKE_SYSTEM_PROCESSOR=$ARCH -DCMAKE_BUILD_TYPE=Release -DCMAKE_SOURCE_DIR=$DEST/bin/cmake -DENABLE_MYSQL=OFF -DENABLE_NAT=ON -DENABLE_REUSE_PORT=ON -DENABLE_SSL_KEYLOG=ON -DENABLE_TLS13_CIPHERSUITES=ON -DFORCE_TCP_FASTOPEN=OFF -DSYSTEMD_SERVICE=OFF -DOPENSSL_USE_STATIC_LIBS=TRUE -DBoost_DEBUG=ON -DBoost_NO_BOOST_CMAKE=ON -DLINK_DIRECTORIES=$DEST/lib -DCMAKE_FIND_ROOT_PATH=$DEST -DBOOST_ROOT=$DEST -DBoost_INCLUDE_DIR=$DEST/include -DBoost_LIBRARY_DIRS=$DEST/lib -DBOOST_LIBRARYDIR=$DEST/lib -DOPENSSL_CRYPTO_LIBRARY=$DEST/lib -DOPENSSL_INCLUDE_DIR=$DEST/include -DOPENSSL_SSL_LIBRARY=$DEST/lib -DBoost_USE_STATIC_LIBS=TRUE -DBoost_PROGRAM_OPTIONS_LIBRARY_RELEASE=$DEST/lib -DBoost_SYSTEM_LIBRARY_RELEASE=$DEST/lib -DCMAKE_SKIP_RPATH=NO -DDEFAULT_CONFIG=/jffs/softcenter/etc/trojan.json -DCMAKE_FIND_LIBRARY_SUFFIXES=.a
 make
+${CORSS_PREFIX}strip trojan
 cd $BASE
 mkdir -p bin/$ARCH
 cp -rf $BASE/trojan-1.14.1/trojan bin/$ARCH
-touch stamp-h1
-fi

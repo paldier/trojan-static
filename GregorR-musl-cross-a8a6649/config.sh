@@ -8,7 +8,8 @@ ARCH=arm
 #ARCH=mipsel
 #ARCH=aarch64
 
-CC_BASE_PREFIX=/home/paldier/trojan/opt/cross
+CCPWD=`pwd`
+CC_BASE_PREFIX=$CCPWD/../opt/cross
 
 # If you use arm, you may need more fine-tuning:
 # arm hardfloat v7

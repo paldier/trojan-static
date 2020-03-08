@@ -38,7 +38,7 @@ target_link_libraries(trojan ${CMAKE_THREAD_LIBS_INIT})
 
 
 include_directories(${Boost_INCLUDE_DIR})
-target_link_libraries(trojan ${BOOST_LIBRARYDIR}/libboost_program_options-mt-s-m32.a ${BOOST_LIBRARYDIR}/libboost_system-mt-s-m32.a)
+target_link_libraries(trojan ${BOOST_LIBRARYDIR}/libboost_program_options.a ${BOOST_LIBRARYDIR}/libboost_system.a)
 if(MSVC)
     add_definitions(-DBOOST_DATE_TIME_NO_LIB)
 endif()
