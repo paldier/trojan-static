@@ -3,8 +3,8 @@
 set -e
 set -x
 
-ARCH=arm64
-#ARCH=arm
+#ARCH=arm64
+ARCH=arm
 #ARCH=mips
 #ARCH=mipsle
 PWD=`pwd`
@@ -73,6 +73,7 @@ MAKE="make"
 [ ! -d "zlib-1.2.11" ] && tar xvJf zlib-1.2.11.tar.xz
 cd zlib-1.2.11
 if [ ! -f "stamp-h1" ];then
+make clean
 CC=${CORSS_PREFIX}gcc \
 LDFLAGS=$LDFLAGS \
 CPPFLAGS=$CPPFLAGS \
@@ -96,6 +97,7 @@ cd $BASE
 [ ! -d "openssl-1.1.1d" ] && tar zxvf openssl-1.1.1d.tar.gz
 cd $BASE/openssl-1.1.1d
 if [ ! -f "stamp-h1" ];then
+make clean
 ./Configure $CONFIGURE
 
 make 
