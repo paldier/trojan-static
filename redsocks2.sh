@@ -56,13 +56,13 @@ LDFLAGS="-L$DEST/lib -Wl,--gc-sections"
 CPPFLAGS="-I$DEST/include"
 CXXFLAGS="$CXXFLAGS $CFLAGS"
 if [ "$ARCH" = "arm" ];then
-CONFIGURE="linux-armv4 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include -DOPENSSL_PREFER_CHACHA_OVER_GCM enable-weak-ssl-ciphers"
+CONFIGURE="linux-armv4 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
 elif [ "$ARCH" = "arm64" ];then
-CONFIGURE="linux-aarch64 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include -DOPENSSL_PREFER_CHACHA_OVER_GCM enable-weak-ssl-ciphers"
+CONFIGURE="linux-aarch64 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
 elif [ "$ARCH" = "mips" ];then
-CONFIGURE="linux-mips32 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include -DOPENSSL_PREFER_CHACHA_OVER_GCM enable-weak-ssl-ciphers"
+CONFIGURE="linux-mips32 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
 elif [ "$ARCH" = "mipsle" ];then
-CONFIGURE="linux-mips32 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3--with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include -DOPENSSL_PREFER_CHACHA_OVER_GCM enable-weak-ssl-ciphers"
+CONFIGURE="linux-mips32 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3--with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
 fi
 MAKE="make"
 
@@ -73,6 +73,7 @@ MAKE="make"
 [ ! -d "zlib-1.2.11" ] && tar xvJf zlib-1.2.11.tar.xz
 cd zlib-1.2.11
 if [ ! -f "stamp-h1" ];then
+make clean
 CC=${CORSS_PREFIX}gcc \
 LDFLAGS=$LDFLAGS \
 CPPFLAGS=$CPPFLAGS \
@@ -96,51 +97,11 @@ cd $BASE
 [ ! -d "openssl-1.1.1d" ] && tar zxvf openssl-1.1.1d.tar.gz
 cd $BASE/openssl-1.1.1d
 if [ ! -f "stamp-h1" ];then
-    if [ ! -e patched ]
-    then
-        for f in "../patches/"*.patch ; do
-            patch -p1 < "$f"
-        done
-        touch patched
-    fi
+make clean
 ./Configure $CONFIGURE
 
 make 
 make install INSTALLTOP=$DEST OPENSSLDIR=$DEST/ssl
-touch stamp-h1
-fi
-
-########### #################################################################
-#  BOOST  # #################################################################
-########### #################################################################
-
-cd $BASE
-[ ! -d "boost_1_71_0" ] && tar jxvf boost_1_71_0.tar.bz2
-cd $BASE/boost_1_71_0
-if [ ! -f "stamp-h1" ];then
-rm -rf bin.v2
-rm -rf project-config.jam
-rm -rf tools/build/src/user-config.jam
-cd tools/build/src/engine
-CC=/usr/bin/gcc \
-CXX=/usr/bin/g++ \
-CFLAGS="" \
-CPPFLAGS="" \
-CXXFLAGS="$CFLAGS" \
-./build.sh gcc
-cd $BASE/boost_1_71_0
-cp -rf tools/build/src/engine/b2 ./b2
-echo "using gcc : : ${CORSS_PREFIX}gcc : <compileflags>\"${TARGET_CFLAGS}\" <cxxflags>\" -std=gnu++14\" <linkflags>\" -pthread -lrt\" ;" > tools/build/src/user-config.jam
-#./bootstrap.sh 
-#sed -i 's/using gcc/using gcc: :${CORSS_PREFIX}gcc ;/g' project-config.jam
-#cp -rf ../gcc.jam $BASE/boost_1_71_0/tools/build/src/tools/gcc.jam
-CC=${CORSS_PREFIX}gcc \
-CXX=${CORSS_PREFIX}g++ \
-./b2 install --ignore-site-config --toolset=gcc --prefix=$DEST abi=$BOOST_ABI --no-cmake-config --layout=tagged --build-type=minimal link=static threading=multi runtime-link=static $mipsarch variant=release --disable-long-double -sNO_BZIP2=1 -sZLIB_INCLUDE=$DEST/include -sZLIB_LIBPATH=$DEST/lib --with-system --with-program_options --with-date_time
-#--without-mpi --without-python --without-graph_parallel --without-test --without-serialization
-mv $DEST/lib/libboost_date_time-*.a $DEST/lib/libboost_date_time.a 
-mv $DEST/lib/libboost_program_options-*.a $DEST/lib/libboost_program_options.a 
-mv $DEST/lib/libboost_system-*.a $DEST/lib/libboost_system.a 
 touch stamp-h1
 fi
 
@@ -164,27 +125,35 @@ touch stamp-h1
 fi
 
 ########### #################################################################
-# TROJAN  # #################################################################
+# LIBEVENT # #################################################################
+########### #################################################################
+cd $BASE
+[ ! -d "libevent-2.1.11-stable" ] && tar zxvf libevent-2.1.11-stable.tar.gz
+cd $BASE/libevent-2.1.11-stable
+if [ ! -f "stamp-h1" ];then
+./configure --disable-debug-mode --disable-samples --disable-libevent-regress --prefix=/opt --host=$ARCH-linux && make
+#cp -rf .libs/libevent*.a $DEST/lib
+make install DESTDIR=$BASE
+fi
+
+########### #################################################################
+#redsocks2# #################################################################
 ########### #################################################################
 
 cd $BASE
-[ ! -d "trojan-1.15.1" ] && tar zxvf trojan-1.15.1.tar.gz
-cd $BASE/trojan-1.15.1
-rm -rf CMakeFiles
-rm -rf CMakeCache.txt
-
-cp -rf ../CMakeLists.txt ./CMakeLists.txt
-export CMAKE_ROOT=$DEST/bin/cmake
+[ ! -d "redsocks2-0.67" ] && tar zxvf redsocks2-0.67.tar.gz
+cd $BASE/redsocks2-0.67
+ENABLE_STATIC=y \
+DISABLE_SHADOWSOCKS=y \
 CC=${CORSS_PREFIX}gcc \
-CXX=${CORSS_PREFIX}g++ \
-LDFLAGS=$LDFLAGS" -static" \
+LDFLAGS=$LDFLAGS \
 CPPFLAGS=$CPPFLAGS \
 CFLAGS=$CFLAGS \
 CXXFLAGS=$CXXFLAGS \
-$DEST/bin/cmake/bin/cmake -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_VERSION=1 -DCMAKE_SYSTEM_PROCESSOR=$ARCH -DCMAKE_BUILD_TYPE=Release -DCMAKE_SOURCE_DIR=$DEST/bin/cmake -DBoost_DEBUG=ON -DBoost_NO_BOOST_CMAKE=ON -DLINK_DIRECTORIES=$DEST/lib -DCMAKE_FIND_ROOT_PATH=$DEST -DBOOST_ROOT=$DEST -DBoost_INCLUDE_DIR=$DEST/include -DBoost_LIBRARY_DIRS=$DEST/lib -DBOOST_LIBRARYDIR=$DEST/lib -DOPENSSL_CRYPTO_LIBRARY=$DEST/lib -DOPENSSL_INCLUDE_DIR=$DEST/include -DOPENSSL_SSL_LIBRARY=$DEST/lib -DBoost_USE_STATIC_LIBS=TRUE -DBoost_PROGRAM_OPTIONS_LIBRARY_RELEASE=$DEST/lib -DBoost_SYSTEM_LIBRARY_RELEASE=$DEST/lib -DCMAKE_SKIP_RPATH=NO -DDEFAULT_CONFIG=/jffs/softcenter/etc/trojan.json -DCMAKE_FIND_LIBRARY_SUFFIXES=.a \
--DENABLE_MYSQL=OFF -DENABLE_NAT=ON -DENABLE_REUSE_PORT=ON -DENABLE_SSL_KEYLOG=ON -DENABLE_TLS13_CIPHERSUITES=ON -DFORCE_TCP_FASTOPEN=OFF -DSYSTEMD_SERVICE=OFF -DOPENSSL_USE_STATIC_LIBS=TRUE
+CROSS_PREFIX=${CORSS_PREFIX} \
 make
-${CORSS_PREFIX}strip trojan
+#make
+${CORSS_PREFIX}strip redsocks2
 cd $BASE
 mkdir -p bin/$ARCH
-cp -rf $BASE/trojan-1.15.1/trojan bin/$ARCH
+cp -rf $BASE/redsocks2-0.67/redsocks2 bin/$ARCH
