@@ -3,9 +3,9 @@
 set -e
 set -x
 
-#ARCH=arm64
+ARCH=arm64
 #ARCH=arm
-ARCH=mips
+#ARCH=mips
 #ARCH=mipsle
 PWD=`pwd`
 #prefix asuswrt:/jffs/softcenter,openwrt:/usr
@@ -57,12 +57,16 @@ CPPFLAGS="-I$DEST/include"
 CXXFLAGS="$CXXFLAGS $CFLAGS"
 if [ "$ARCH" = "arm" ];then
 CONFIGURE="linux-armv4 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
+ARCHBUILD=arm
 elif [ "$ARCH" = "arm64" ];then
 CONFIGURE="linux-aarch64 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
+ARCHBUILD=aarch64
 elif [ "$ARCH" = "mips" ];then
 CONFIGURE="linux-mips32 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3 --with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
+ARCHBUILD=mips
 elif [ "$ARCH" = "mipsle" ];then
 CONFIGURE="linux-mips32 -Os -static --prefix=/opt zlib enable-ssl3 enable-ssl3-method enable-tls1_3--with-zlib-lib=$DEST/lib --with-zlib-include=$DEST/include"
+ARCHBUILD=mipsle
 fi
 MAKE="make"
 
@@ -73,7 +77,6 @@ MAKE="make"
 [ ! -d "zlib-1.2.11" ] && tar xvJf zlib-1.2.11.tar.xz
 cd zlib-1.2.11
 if [ ! -f "stamp-h1" ];then
-make clean
 CC=${CORSS_PREFIX}gcc \
 LDFLAGS=$LDFLAGS \
 CPPFLAGS=$CPPFLAGS \
@@ -97,7 +100,6 @@ cd $BASE
 [ ! -d "openssl-1.1.1d" ] && tar zxvf openssl-1.1.1d.tar.gz
 cd $BASE/openssl-1.1.1d
 if [ ! -f "stamp-h1" ];then
-make clean
 ./Configure $CONFIGURE
 
 make 
@@ -125,17 +127,36 @@ touch stamp-h1
 fi
 
 ########### #################################################################
-# LIBEVENT # #################################################################
+# LIBEVENT# #################################################################
 ########### #################################################################
 cd $BASE
 [ ! -d "libevent-2.1.11-stable" ] && tar zxvf libevent-2.1.11-stable.tar.gz
 cd $BASE/libevent-2.1.11-stable
 if [ ! -f "stamp-h1" ];then
-./configure --disable-debug-mode --disable-samples --disable-libevent-regress --prefix=/opt --host=$ARCH-linux && make
+./configure --disable-debug-mode --disable-samples --disable-libevent-regress --prefix=/opt --host=$ARCHBUILD-linux && make
 #cp -rf .libs/libevent*.a $DEST/lib
 make install DESTDIR=$BASE
 fi
-
+########### #################################################################
+#  PDNSD  # #################################################################
+########### #################################################################
+cd $BASE
+[ ! -d "pdnsd-1.2.9b-par" ] && tar zxvf pdnsd-1.2.9b-par.tar.gz
+cd $BASE/pdnsd-1.2.9b-par
+if [ ! -f "stamp-h1" ];then
+CC=${CORSS_PREFIX}gcc \
+LDFLAGS=$LDFLAGS" -static" \
+CPPFLAGS=$CPPFLAGS \
+CFLAGS=$CFLAGS \
+CXXFLAGS=$CXXFLAGS \
+CROSS_PREFIX=${CORSS_PREFIX} \
+./configure --with-cachedir=/var/pdnsd --with-target=Linux --host=$ARCHBUILD-linux
+make
+${CORSS_PREFIX}strip src/pdnsd-ctl/pdnsd-ctl
+cd $BASE
+mkdir -p bin/$ARCH
+cp -rf $BASE/pdnsd-1.2.9b-par/src/pdnsd-ctl/pdnsd-ctl bin/$ARCH/pdnsd
+fi
 ########### #################################################################
 #redsocks2# #################################################################
 ########### #################################################################
@@ -146,7 +167,7 @@ cd $BASE/redsocks2-0.67
 ENABLE_STATIC=y \
 DISABLE_SHADOWSOCKS=y \
 CC=${CORSS_PREFIX}gcc \
-LDFLAGS=$LDFLAGS \
+LDFLAGS=$LDFLAGS" -static" \
 CPPFLAGS=$CPPFLAGS \
 CFLAGS=$CFLAGS \
 CXXFLAGS=$CXXFLAGS \

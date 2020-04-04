@@ -3,9 +3,9 @@
 set -e
 set -x
 
-#ARCH=arm64
+ARCH=arm64
 #ARCH=arm
-ARCH=mips
+#ARCH=mips
 #ARCH=mipsle
 PWD=`pwd`
 #prefix asuswrt:/jffs/softcenter,openwrt:/usr
