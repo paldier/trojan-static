@@ -150,12 +150,12 @@ CPPFLAGS=$CPPFLAGS \
 CFLAGS=$CFLAGS \
 CXXFLAGS=$CXXFLAGS \
 CROSS_PREFIX=${CORSS_PREFIX} \
-./configure --with-cachedir=/var/pdnsd --with-target=Linux --host=$ARCHBUILD-linux
+./configure --with-cachedir=/var/pdnsd --with-target=Linux --host=$ARCHBUILD-linux --with-debug=1
 make
-${CORSS_PREFIX}strip src/pdnsd-ctl/pdnsd-ctl
+${CORSS_PREFIX}strip src/pdnsd
 cd $BASE
 mkdir -p bin/$ARCH
-cp -rf $BASE/pdnsd-1.2.9b-par/src/pdnsd-ctl/pdnsd-ctl bin/$ARCH/pdnsd
+cp -rf $BASE/pdnsd-1.2.9b-par/src/pdnsd bin/$ARCH/pdnsd
 fi
 ########### #################################################################
 #redsocks2# #################################################################
@@ -164,6 +164,7 @@ fi
 cd $BASE
 [ ! -d "redsocks2-0.67" ] && tar zxvf redsocks2-0.67.tar.gz
 cd $BASE/redsocks2-0.67
+if [ ! -f "stamp-h1" ];then
 ENABLE_STATIC=y \
 DISABLE_SHADOWSOCKS=y \
 CC=${CORSS_PREFIX}gcc \
@@ -178,3 +179,15 @@ ${CORSS_PREFIX}strip redsocks2
 cd $BASE
 mkdir -p bin/$ARCH
 cp -rf $BASE/redsocks2-0.67/redsocks2 bin/$ARCH
+fi
+########### #################################################################
+#microsocks# ################################################################
+########### #################################################################
+cd $BASE
+[ ! -d "microsocks" ] && tar zxvf microsocks.1.0.1.tar.gz
+cd $BASE/microsocks
+make
+${CORSS_PREFIX}strip microsocks
+cd $BASE
+mkdir -p bin/$ARCH
+cp -rf $BASE/microsocks/microsocks bin/$ARCH
