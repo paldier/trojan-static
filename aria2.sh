@@ -165,7 +165,8 @@ $CONFIGURE \
  --with-xpath \
  --with-xptr \
  --with-zlib=$DEST \
- --without-lzma
+ --without-lzma \
+ --with-lzma=no
 
 $MAKE LIBS="-lz"
 make install DESTDIR=$BASE
@@ -193,7 +194,7 @@ fi
 ######### ###################################################################
 cd $BASE
 [ ! -d "aria2-1.33.0" ] && tar xvJf aria2-1.33.0.tar.xz
-cd aria2-1.33.0 && sed -i "s/LIBXML2_LIBS = -lxml2 -lz -lm -llzma/LIBXML2_LIBS = -lxml2 -lz -lm/g" src/Makefile && sed -i "s/-lxml2 -lz -lm -llzma/-lxml2 -lz -lm/g" src/Makefile && sed -i "s/LIBXML2_LIBS = -lxml2 -lz -lm -llzma/LIBXML2_LIBS = -lxml2 -lz -lm/g" src/includes/Makefile && sed -i "s/LIBXML2_LIBS = -lxml2 -lz -lm -llzma/LIBXML2_LIBS = -lxml2 -lz -lm/g" Makefile
+cd aria2-1.33.0
 LDFLAGS="-zmuldefs $LDFLAGS" \
 CPPFLAGS=$CPPFLAGS \
 CFLAGS=$CFLAGS \
@@ -210,6 +211,7 @@ $CONFIGURE \
 --without-libgcrypt \
 --without-libexpat \
 --with-xml-prefix=$DEST \
+--with-libz \
 ZLIB_CFLAGS="-I$DEST/include" \
 ZLIB_LIBS="-L$DEST/lib" \
 OPENSSL_CFLAGS="-I$DEST/include" \
@@ -220,5 +222,10 @@ LIBCARES_CFLAGS="-I$DEST/include" \
 LIBCARES_LIBS="-L$DEST/lib" \
 ARIA2_STATIC=yes
 
+echo 0 && sed -i "s/LIBXML2_LIBS = -lxml2 -lz -lm -llzma/LIBXML2_LIBS = -lxml2 -lz -lm/g" src/Makefile && sed -i "s/-lxml2 -lz -lm -llzma/-lxml2 -lz -lm/g" src/Makefile && sed -i "s/LIBXML2_LIBS = -lxml2 -lz -lm -llzma/LIBXML2_LIBS = -lxml2 -lz -lm/g" src/includes/Makefile && sed -i "s/LIBXML2_LIBS = -lxml2 -lz -lm -llzma/LIBXML2_LIBS = -lxml2 -lz -lm/g" Makefile
+
 $MAKE LIBS="-lz -lssl -lcrypto -lsqlite3 -lcares -lxml2"
-${CORSS_PREFIX}strip aria2c
+${CORSS_PREFIX}strip src/aria2c
+cd $BASE
+mkdir -p bin/$ARCH
+cp -rf $BASE/aria2-1.33.0/src/aria2c bin/$ARCH
